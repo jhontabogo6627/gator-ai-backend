@@ -45,14 +45,30 @@ app.post("/api/chat", async (req, res) => {
       { role: "user", content: userMsg }
     ];
 
-    const response = await client.responses.create({
-      model: process.env.OPENAI_MODEL || "gpt-4.1-mini",
-      input
-    });
+   const response = await client.responses.create({
+  model: process.env.OPENAI_MODEL || "gpt-4.1-mini",
+  input
+});
 
-    const reply = response.output_text || "";
-    res.json({ reply: reply.trim() || "¿Qué marca y talla buscas?" });
-  } catch (err) {
+// Extraer texto de forma robusta (evita respuestas vacías y errores raros)
+let reply = "";
+
+if (typeof response.output_text === "string" && response.output_text.trim()) {
+  reply = response.output_text;
+} else if (Array.isArray(response.output)) {
+  // Recorre outputs y junta cualquier texto encontrado
+  for (const item of response.output) {
+    if (!item || !Array.isArray(item.content)) continue;
+    for (const c of item.content) {
+      if (c?.type === "output_text" && typeof c.text === "string") reply += c.text;
+      if (c?.type === "text" && typeof c.text === "string") reply += c.text;
+    }
+  }
+}
+
+reply = (reply || "").trim();
+res.json({ reply: reply || "¿Qué marca y talla buscas?" });
+
     res.status(500).json({
       reply: "Error del asistente. Intenta de nuevo.",
       error: String(err?.message || err)

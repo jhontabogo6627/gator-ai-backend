@@ -45,13 +45,15 @@ app.post("/api/chat", async (req, res) => {
       { role: "user", content: userMsg }
     ];
 
-   const response = await client.responses.create({
-  model: process.env.OPENAI_MODEL || "gpt-4.1-mini",
-  input
+   const completion = await client.chat.completions.create({
+  model: process.env.OPENAI_MODEL || "gpt-4o-mini",
+  messages: input,
+  temperature: 0.4
 });
 
-// Extraer texto de forma robusta (evita respuestas vacías y errores raros)
-let reply = "";
+const reply = completion?.choices?.[0]?.message?.content || "";
+res.json({ reply: reply.trim() || "¿Qué marca y talla buscas?" });
+
 
 if (typeof response.output_text === "string" && response.output_text.trim()) {
   reply = response.output_text;
